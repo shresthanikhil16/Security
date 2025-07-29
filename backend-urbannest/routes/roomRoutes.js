@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect, authorize } = require("../middleware/auth");
+const upload = require("../middleware/upload");
 const {
   createRoom,
   getAllRooms,
@@ -8,11 +9,12 @@ const {
   getNearbyRooms,
   updateRoom,
   deleteRoom,
+  validateRoom,
 } = require("../controllers/roomController");
 
 // Admin-only routes
-router.post("/", protect, authorize("admin"), createRoom);
-router.put("/:id", protect, authorize("admin"), updateRoom);
+router.post("/", protect, authorize("admin"), upload.single("roomImage"), validateRoom, createRoom);
+router.put("/:id", protect, authorize("admin"), upload.single("roomImage"), validateRoom, updateRoom);
 router.delete("/:id", protect, authorize("admin"), deleteRoom);
 
 // Public routes

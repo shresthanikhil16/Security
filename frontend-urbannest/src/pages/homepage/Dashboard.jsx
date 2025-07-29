@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import "tailwindcss/tailwind.css";
 import Footer from "../../components/Footer.jsx";
 import Navbar from "../../components/Navbar.jsx";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -28,7 +29,9 @@ const Dashboard = () => {
   const [nearbyFlatIndex, setNearbyFlatIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const { secureAxios, isLoading: csrfLoading } = useCSRFProtection();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Refs for sections to observe
   const heroRef = useRef(null);
@@ -41,46 +44,129 @@ const Dashboard = () => {
     "../../src/assets/images/apt3.jpg",
   ];
 
+  // Function to fetch rooms
+  const fetchRooms = async () => {
+    try {
+      let response;
+
+      if (secureAxios && !csrfLoading && typeof secureAxios.get === 'function') {
+        console.log('Fetching rooms with secureAxios...');
+        response = await secureAxios.get("/api/rooms");
+      } else {
+        console.log('Fetching rooms with fallback axios...');
+        response = await axios.get("https://localhost:3000/api/rooms");
+      }
+
+      console.log('Rooms response:', response.data);
+
+      // Handle different response formats
+      const roomsData = response.data.rooms || response.data || [];
+      setFlats(roomsData);
+      setFilteredFlats(roomsData);
+      console.log(`Successfully loaded ${roomsData.length} rooms`);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      // Try fallback if secure axios fails
+      if (secureAxios && error.response?.status === 403) {
+        console.log('Secure axios failed, trying fallback...');
+        try {
+          const fallbackResponse = await axios.get("https://localhost:3000/api/rooms");
+          const fallbackRooms = fallbackResponse.data.rooms || fallbackResponse.data || [];
+          setFlats(fallbackRooms);
+          setFilteredFlats(fallbackRooms);
+          console.log(`Fallback loaded ${fallbackRooms.length} rooms`);
+        } catch (fallbackError) {
+          console.error("Fallback also failed:", fallbackError);
+        }
+      }
+    }
+  }; useEffect(() => {
+    fetchRooms();
+  }, [secureAxios, csrfLoading, refreshTrigger]);
+
+  // Additional effect to ensure rooms are fetched even if CSRF takes time
   useEffect(() => {
-    fetch("https://localhost:3000/api/rooms")
-      .then((response) => response.json())
-      .then((data) => {
-        setFlats(data);
-        setFilteredFlats(data);
-      })
-      .catch((error) => console.error("Error fetching rooms:", error));
-  }, []);
+    const timer = setTimeout(() => {
+      if (flats.length === 0) {
+        console.log('No rooms loaded after timeout, forcing fetch...');
+        fetchRooms();
+      }
+    }, 3000); // Try again after 3 seconds if no rooms are loaded
+
+    return () => clearTimeout(timer);
+  }, [flats.length]);
 
   useEffect(() => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          setLocation({ latitude, longitude });
-          try {
-            const response = await axios.post("https://localhost:3000/api/rooms/nearby", {
-              latitude,
-              longitude,
-              radius: 5000,
-              maxPrice: nearbyFilters.maxPrice ? Number(nearbyFilters.maxPrice) : undefined,
-              bathroom: nearbyFilters.bathroom ? Number(nearbyFilters.bathroom) : undefined,
-              parking: nearbyFilters.parking || undefined,
-            });
-            setNearbyFlats(response.data);
-            setFilteredNearbyFlats(response.data);
-            setNearbyError(null);
-          } catch (err) {
-            setNearbyError("Failed to fetch nearby rooms: " + err.message);
+      if (secureAxios && !csrfLoading && typeof secureAxios.post === 'function') {
+        // Use secure axios if available
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            setLocation({ latitude, longitude });
+            try {
+              const response = await secureAxios.post("/api/rooms/nearby", {
+                latitude,
+                longitude,
+                radius: 5000,
+                maxPrice: nearbyFilters.maxPrice ? Number(nearbyFilters.maxPrice) : undefined,
+                bathroom: nearbyFilters.bathroom ? Number(nearbyFilters.bathroom) : undefined,
+                parking: nearbyFilters.parking || undefined,
+              });
+              const nearbyRooms = response.data.rooms || response.data || [];
+              setNearbyFlats(nearbyRooms);
+              setFilteredNearbyFlats(nearbyRooms);
+              setNearbyError(null);
+            } catch (err) {
+              setNearbyError("Failed to fetch nearby rooms: " + err.message);
+            }
+          },
+          (err) => {
+            setNearbyError("Geolocation error: " + err.message);
           }
-        },
-        (err) => {
-          setNearbyError("Geolocation error: " + err.message);
-        }
-      );
+        );
+      } else if (!csrfLoading) {
+        // Fallback to regular axios if secureAxios is not available
+        console.warn("secureAxios not available for nearby rooms, using fallback");
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            setLocation({ latitude, longitude });
+            try {
+              const response = await axios.post("https://localhost:3000/api/rooms/nearby", {
+                latitude,
+                longitude,
+                radius: 5000,
+                maxPrice: nearbyFilters.maxPrice ? Number(nearbyFilters.maxPrice) : undefined,
+                bathroom: nearbyFilters.bathroom ? Number(nearbyFilters.bathroom) : undefined,
+                parking: nearbyFilters.parking || undefined,
+              }, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  // Add auth token if available
+                  'Authorization': localStorage.getItem('user') ?
+                    `Bearer ${JSON.parse(localStorage.getItem('user')).token}` : undefined
+                }
+              });
+              const nearbyRooms = response.data.rooms || response.data || [];
+              setNearbyFlats(nearbyRooms);
+              setFilteredNearbyFlats(nearbyRooms);
+              setNearbyError(null);
+            } catch (err) {
+              setNearbyError("Failed to fetch nearby rooms: " + err.message);
+            }
+          },
+          (err) => {
+            setNearbyError("Geolocation error: " + err.message);
+          }
+        );
+      } else {
+        setNearbyError("Initializing security...");
+      }
     } else {
       setNearbyError("Geolocation is not supported by this browser.");
     }
-  }, [nearbyFilters]);
+  }, [nearbyFilters, secureAxios, csrfLoading]);
 
   useEffect(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -122,6 +208,37 @@ const Dashboard = () => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Effect to refresh data when page regains focus or when a new room flag is detected
+  useEffect(() => {
+    const handleFocus = () => {
+      // Check if a new room was added (flag set by AddRooms component)
+      const newRoomAdded = localStorage.getItem('newRoomAdded');
+      if (newRoomAdded === 'true') {
+        console.log('New room detected, refreshing data...');
+        setRefreshTrigger(prev => prev + 1);
+        localStorage.removeItem('newRoomAdded'); // Clear the flag
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        handleFocus();
+      }
+    };
+
+    // Listen for focus events
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Check immediately when component mounts
+    handleFocus();
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Intersection Observer for scroll animations

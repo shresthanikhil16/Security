@@ -4,6 +4,7 @@ import { FaFileAlt, FaHome, FaUser } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Navbar from "../../components/Navbar";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 const AuditLogs = () => {
     const [logs, setLogs] = useState([]);
@@ -13,6 +14,7 @@ const AuditLogs = () => {
     const [filterAction, setFilterAction] = useState("");
     const [filterEmail, setFilterEmail] = useState("");
     const navigate = useNavigate();
+    const { secureAxios, isLoading: csrfLoading } = useCSRFProtection();
 
     const getToken = () => {
         try {
@@ -23,7 +25,8 @@ const AuditLogs = () => {
         }
     };
 
-    const api = axios.create({
+    // Fallback API instance for when CSRF is not available
+    const fallbackApi = axios.create({
         baseURL: "https://localhost:3000",
         headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -39,15 +42,36 @@ const AuditLogs = () => {
         }
 
         const fetchLogs = async () => {
+            if (csrfLoading) {
+                console.log("CSRF still loading, waiting...");
+                return;
+            }
+
             try {
-                const response = await api.get("/api/auth/audit-logs", {
-                    params: { page, limit, action: filterAction, email: filterEmail },
-                });
+                let response;
+                
+                // Try secure axios first, fallback to regular axios with auth headers
+                if (secureAxios && typeof secureAxios.get === 'function') {
+                    console.log("Using secure CSRF-protected request");
+                    response = await secureAxios.get("/api/audit/audit-logs", {
+                        params: { page, limit, action: filterAction, email: filterEmail },
+                    });
+                } else {
+                    console.log("Using fallback API with Bearer token");
+                    response = await fallbackApi.get("/api/audit/audit-logs", {
+                        params: { page, limit, action: filterAction, email: filterEmail },
+                    });
+                }
+                
                 setLogs(response.data.logs || []);
                 setTotal(response.data.total || 0);
             } catch (error) {
+                console.error("Audit logs fetch error:", error);
                 if (error.response?.status === 403) {
                     toast.error("Admin access required");
+                    navigate("/login");
+                } else if (error.response?.status === 401) {
+                    toast.error("Authentication required. Please login again.");
                     navigate("/login");
                 } else {
                     toast.error(error.response?.data?.message || "Failed to fetch audit logs");
@@ -56,7 +80,7 @@ const AuditLogs = () => {
         };
 
         fetchLogs();
-    }, [navigate, page, filterAction, filterEmail]);
+    }, [navigate, page, filterAction, filterEmail, secureAxios, csrfLoading]);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;

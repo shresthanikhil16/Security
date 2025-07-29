@@ -9,6 +9,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "tailwindcss/tailwind.css";
 import Navbar from "../../components/Navbar";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -30,7 +31,9 @@ const AddRooms = () => {
     roomImage: null,
     location: { type: "Point", coordinates: [85.324, 27.7172] }, // Default: Kathmandu
   });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { secureAxios, isLoading: csrfLoading, csrfEnabled } = useCSRFProtection();
 
   // Predefined locations
   const locations = [
@@ -152,6 +155,11 @@ const AddRooms = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (csrfLoading) {
+      toast.error("Security initialization in progress. Please wait.");
+      return;
+    }
+
     // Validation
     if (
       !roomDetails.roomDescription ||
@@ -173,6 +181,8 @@ const AddRooms = () => {
       return;
     }
 
+    setLoading(true);
+
     const formData = new FormData();
     formData.append("roomDescription", roomDetails.roomDescription);
     formData.append("floor", roomDetails.floor);
@@ -187,18 +197,34 @@ const AddRooms = () => {
     }
 
     try {
-      await axios.post("https://localhost:3000/api/rooms", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
-        },
-      });
+      if (secureAxios && typeof secureAxios.post === 'function') {
+        // Use secure axios if available
+        await secureAxios.post("/api/rooms", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        // Fallback to regular axios
+        console.warn("secureAxios not available, using fallback for adding room");
+        await axios.post("https://localhost:3000/api/rooms", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
+          },
+        });
+      }
 
       toast.success("Room added successfully!");
+      // Set flag to indicate a new room was added
+      localStorage.setItem('newRoomAdded', 'true');
       navigate("/adminDash");
     } catch (error) {
       console.error("Error adding room:", error);
-      toast.error("Error adding room. Please try again.");
+      const errorMsg = error.response?.data?.message || error.response?.data?.msg || "Error adding room. Please try again.";
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -431,10 +457,19 @@ const AddRooms = () => {
               <div>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md"
+                  disabled={loading || csrfLoading}
+                  className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Room
+                  {csrfLoading ? "Initializing Security..." : loading ? "Adding Room..." : "Add Room"}
                 </button>
+
+                {!csrfLoading && csrfEnabled === false && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-xs text-yellow-600 text-center">
+                      ⚠️ Running without CSRF protection
+                    </p>
+                  </div>
+                )}
               </div>
             </form>
           </div>

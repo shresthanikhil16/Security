@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import zxcvbn from "zxcvbn";
 import Navbar from "../../components/Navbar";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -18,6 +19,7 @@ const Register = () => {
   const [passwordStrength, setPasswordStrength] = useState(null);
   const recaptchaRef = useRef(null);
   const navigate = useNavigate();
+  const { secureAxios, isLoading: csrfLoading, csrfEnabled } = useCSRFProtection();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -73,6 +75,11 @@ const Register = () => {
       return;
     }
 
+    if (csrfLoading) {
+      toast.error("Security initialization in progress. Please wait.");
+      return;
+    }
+
     const requestBody = {
       name,
       email,
@@ -83,9 +90,18 @@ const Register = () => {
     };
 
     try {
-      const response = await axios.post("https://localhost:3000/api/auth/register", requestBody, {
-        headers: { "Content-Type": "application/json" },
-      });
+      let response;
+
+      if (secureAxios && typeof secureAxios.post === 'function') {
+        // Use secure axios if available
+        response = await secureAxios.post("/api/auth/register", requestBody);
+      } else {
+        // Fallback to regular axios
+        console.warn("secureAxios not available, using fallback for registration");
+        response = await axios.post("https://localhost:3000/api/auth/register", requestBody, {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       // Save to localStorage for OTP step
       localStorage.setItem("otpEmail", email);
@@ -210,11 +226,21 @@ const Register = () => {
             )}
             <button
               type="submit"
-              className="w-full py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
+              disabled={csrfLoading}
+              className="w-full py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Register
+              {csrfLoading ? "Initializing Security..." : "Register"}
             </button>
           </form>
+
+          {!csrfLoading && csrfEnabled === false && (
+            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-xs text-yellow-600 text-center">
+                ⚠️ Running without CSRF protection
+              </p>
+            </div>
+          )}
+
           <p className="text-center mt-6 text-sm text-gray-600">
             Already have an account?{" "}
             <a href="/login" className="text-blue-600 hover:underline">

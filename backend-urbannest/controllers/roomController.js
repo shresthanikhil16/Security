@@ -3,6 +3,7 @@ const sanitizeHtml = require("sanitize-html");
 const fs = require("fs");
 const Room = require("../models/roomsModel");
 const upload = require("../middleware/upload");
+const { sanitizeRoomInput, sanitizeFileName, sanitizeInput } = require("../utils/xssProtection");
 
 // Validation middleware for room creation and update
 const validateRoom = [
@@ -29,14 +30,32 @@ const validateRoom = [
 // Create a new room
 const createRoom = async (req, res) => {
   try {
+    // Log incoming request data for debugging
+    console.log('Create room request body:', req.body);
+    console.log('Create room request file:', req.file);
+
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { roomDescription, floor, address, rentPrice, parking, contactNo, bathroom, location } = req.body;
-    const roomImage = req.file ? req.file.path : "";
+    // Sanitize all text inputs using XSS protection utility
+    const sanitizedData = sanitizeRoomInput(req.body);
+    const { roomDescription, floor, address, rentPrice, parking, contactNo, bathroom, location } = sanitizedData;
+
+    // Debug logging
+    console.log("Room creation - Original body:", req.body);
+    console.log("Room creation - Sanitized data:", sanitizedData);
+    console.log("Room creation - rentPrice value:", rentPrice, "type:", typeof rentPrice);
+
+    // Sanitize uploaded file name if present
+    let roomImage = "";
+    if (req.file) {
+      const sanitizedFileName = sanitizeFileName(req.file.originalname);
+      roomImage = req.file.path;
+    }
 
     // Validate file type
     if (req.file) {
@@ -48,14 +67,10 @@ const createRoom = async (req, res) => {
       }
     }
 
-    // Sanitize text inputs
-    const sanitizedRoomDescription = sanitizeHtml(roomDescription);
-    const sanitizedAddress = sanitizeHtml(address);
-
     const roomData = {
-      roomDescription: sanitizedRoomDescription,
+      roomDescription,
       floor: Number(floor),
-      address: sanitizedAddress,
+      address,
       rentPrice: Number(rentPrice),
       parking,
       contactNo,
@@ -90,12 +105,51 @@ const getAllRooms = async (req, res) => {
 // Get a single room by ID
 const getRoomById = async (req, res) => {
   try {
+    console.log("Fetching room by ID:", req.params.id);
+
     const room = await Room.findById(req.params.id);
     if (!room) {
+      console.log("Room not found for ID:", req.params.id);
       return res.status(404).json({ success: false, message: "Room not found" });
     }
-    res.status(200).json({ success: true, room });
+
+    // Log the room data for debugging
+    console.log("Raw room data from database:", room);
+
+    // Sanitize and format the room data for frontend
+    const sanitizedRoom = {
+      _id: room._id,
+      roomDescription: sanitizeInput(room.roomDescription || ''),
+      floor: room.floor || 0,
+      address: sanitizeInput(room.address || ''),
+      rentPrice: room.rentPrice || 0,
+      parking: sanitizeInput(room.parking || ''),
+      contactNo: sanitizeInput(room.contactNo || ''),
+      contact: sanitizeInput(room.contactNo || ''), // Alias for frontend compatibility
+      bathroom: room.bathroom || 0,
+      bathrooms: room.bathroom || 0, // Alias for frontend compatibility  
+      roomImage: room.roomImage ? sanitizeInput(room.roomImage) : null,
+      location: room.location || { type: "Point", coordinates: [0, 0] },
+      createdAt: room.createdAt
+    };
+
+    console.log("Sanitized room data being sent:", sanitizedRoom);
+
+    res.status(200).json({
+      success: true,
+      room: sanitizedRoom,
+      debug: {
+        originalFields: {
+          hasAddress: !!room.address,
+          hasFloor: !!room.floor,
+          hasParking: !!room.parking,
+          hasContactNo: !!room.contactNo,
+          hasBathroom: !!room.bathroom
+        }
+      }
+    });
   } catch (error) {
+    console.error("Error fetching room:", error);
     res.status(500).json({ success: false, message: "Error fetching room", error: error.message });
   }
 };
@@ -144,7 +198,15 @@ const updateRoom = async (req, res) => {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { roomDescription, floor, address, rentPrice, parking, contactNo, bathroom, location } = req.body;
+    // Sanitize all text inputs using XSS protection utility
+    const sanitizedData = sanitizeRoomInput(req.body);
+    const { roomDescription, floor, address, rentPrice, parking, contactNo, bathroom, location } = sanitizedData;
+
+    // Debug logging
+    console.log("Room update - Original body:", req.body);
+    console.log("Room update - Sanitized data:", sanitizedData);
+    console.log("Room update - rentPrice value:", rentPrice, "type:", typeof rentPrice);
+
     const roomImage = req.file ? req.file.path : undefined;
 
     // Validate file type
@@ -157,12 +219,15 @@ const updateRoom = async (req, res) => {
       }
     }
 
-    // Sanitize text inputs
-    const sanitizedRoomDescription = sanitizeHtml(roomDescription);
-    const sanitizedAddress = sanitizeHtml(address);
-
     const updateData = {
-      roomDescription: sanitizedRoomDescription,
+      roomDescription,
+      floor: Number(floor),
+      address,
+      rentPrice: Number(rentPrice),
+      parking,
+      contactNo,
+      bathroom: Number(bathroom),
+      location: JSON.parse(location),
       floor: Number(floor),
       address: sanitizedAddress,
       rentPrice: Number(rentPrice),
@@ -204,10 +269,11 @@ const deleteRoom = async (req, res) => {
 };
 
 module.exports = {
-  createRoom: [...validateRoom, upload.single("roomImage"), createRoom],
+  createRoom,
   getAllRooms,
   getRoomById,
   getNearbyRooms,
-  updateRoom: [...validateRoom, upload.single("roomImage"), updateRoom],
+  updateRoom,
   deleteRoom,
+  validateRoom, // Export validation for use in routes
 };

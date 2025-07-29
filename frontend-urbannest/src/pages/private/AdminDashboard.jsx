@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 const AdminDashboard = () => {
   const [flats, setFlats] = useState([]);
@@ -12,6 +13,7 @@ const AdminDashboard = () => {
   const limit = 10;
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
+  const { secureAxios, isLoading: csrfLoading } = useCSRFProtection();
 
   const getToken = () => {
     try {
@@ -29,6 +31,14 @@ const AdminDashboard = () => {
     },
   });
 
+  // Helper function to get the appropriate axios instance
+  const getApiInstance = () => {
+    if (secureAxios && typeof secureAxios.get === 'function') {
+      return secureAxios;
+    }
+    return api;
+  };
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user || user.role !== "admin") {
@@ -38,13 +48,23 @@ const AdminDashboard = () => {
     }
 
     const fetchFlats = async () => {
+      if (csrfLoading) {
+        console.log("CSRF still loading, waiting...");
+        return;
+      }
+
       try {
-        const response = await api.get(`/api/rooms?page=${page}&limit=${limit}`);
+        const apiInstance = getApiInstance();
+        const response = await apiInstance.get(`/api/rooms?page=${page}&limit=${limit}`);
         setFlats(response.data.rooms || []);
         setTotal(response.data.total || 0);
       } catch (error) {
+        console.error("Fetch flats error:", error);
         if (error.response?.status === 403) {
           toast.error("Admin access required");
+          navigate("/login");
+        } else if (error.response?.status === 401) {
+          toast.error("Authentication required. Please login again.");
           navigate("/login");
         } else {
           toast.error(error.response?.data?.message || "Failed to fetch rooms");
@@ -53,19 +73,31 @@ const AdminDashboard = () => {
     };
 
     fetchFlats();
-  }, [navigate, page]);
+  }, [navigate, page, secureAxios, csrfLoading]);
 
   const handleEdit = (flatId) => {
     navigate(`/adminUpdate/${flatId}`);
   };
 
   const handleDelete = async (flatId) => {
+    if (csrfLoading) {
+      toast.error("Security initialization in progress. Please wait.");
+      return;
+    }
+
     try {
-      await api.delete(`/api/rooms/${flatId}`);
+      const apiInstance = getApiInstance();
+      await apiInstance.delete(`/api/rooms/${flatId}`);
       setFlats(flats.filter((flat) => flat._id !== flatId));
       toast.success("Room deleted successfully");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to delete room");
+      console.error("Delete room error:", error);
+      if (error.response?.status === 401) {
+        toast.error("Authentication required. Please login again.");
+        navigate("/login");
+      } else {
+        toast.error(error.response?.data?.message || "Failed to delete room");
+      }
     }
   };
 
@@ -123,13 +155,23 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={async () => {
+                if (csrfLoading) {
+                  toast.error("Security initialization in progress. Please wait.");
+                  return;
+                }
+
                 try {
-                  await api.post("/api/auth/logout");
+                  const apiInstance = getApiInstance();
+                  await apiInstance.post("/api/auth/logout");
                   localStorage.removeItem("user");
                   toast.success("Logged out successfully");
                   navigate("/login");
                 } catch (error) {
+                  console.error("Logout error:", error);
+                  // Even if logout fails, clear local storage and redirect
+                  localStorage.removeItem("user");
                   toast.error(error.response?.data?.message || "Error logging out");
+                  navigate("/login");
                 }
               }}
               className="w-full px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold"

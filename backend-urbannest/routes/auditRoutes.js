@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/auth");
+const { protect, authorize } = require("../middleware/auth");
 const { getAuditLogs } = require("../controllers/auditController");
 
-router.get("/audit-logs", protect, getAuditLogs);
+// Protected route for admin users only to access audit logs
+router.get("/audit-logs", protect, authorize("admin"), getAuditLogs);
 
 module.exports = router;

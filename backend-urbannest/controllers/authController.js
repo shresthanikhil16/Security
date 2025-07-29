@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const randomstring = require("randomstring");
 const User = require("../models/User");
+const { sanitizeUserInput, sanitizeInput } = require("../utils/xssProtection");
 
 const sendEmail = async (to, subject, html) => {
     const transporter = nodemailer.createTransport({
@@ -34,7 +35,10 @@ const sendEmail = async (to, subject, html) => {
 };
 
 const registerUser = async (req, res) => {
-    const { name, email, password, confirm_password, role = "user", recaptchaToken } = req.body;
+    // Sanitize input data to prevent XSS
+    const sanitizedBody = sanitizeUserInput(req.body);
+    const { name, email, password, confirm_password, role = "user", recaptchaToken } = sanitizedBody;
+
     console.log("Register request body:", req.body);
 
     const missingFields = [];
@@ -107,7 +111,10 @@ const verifyOTP = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-    const { email, password, recaptchaToken } = req.body;
+    // Sanitize input data to prevent XSS
+    const sanitizedBody = sanitizeUserInput(req.body);
+    const { email, password, recaptchaToken } = sanitizedBody;
+
     console.log("Login request body:", req.body);
     if (!email || !password) {
         return res.status(400).json({ success: false, message: "Email and password are required" });
@@ -144,4 +151,145 @@ const loginUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, verifyOTP, loginUser };
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Generate reset token (6-digit OTP)
+        const resetToken = randomstring.generate({ length: 6, charset: "numeric" });
+
+        // Set reset token and expiry (10 minutes)
+        user.otp = resetToken;
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        // Send reset email
+        await sendEmail(
+            email,
+            "Password Reset Request",
+            `<p>You requested a password reset. Your reset code is <b>${resetToken}</b>.</p>
+             <p>This code will expire in 10 minutes.</p>
+             <p>If you didn't request this, please ignore this email.</p>`
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset code sent to your email"
+        });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending reset email",
+            error: error.message
+        });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({
+            success: false,
+            message: "Email, OTP, and new password are required"
+        });
+    }
+
+    try {
+        const user = await User.findOne({
+            email,
+            otp,
+            otpExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset code"
+            });
+        }
+
+        // Validate password complexity
+        if (!user.validatePasswordComplexity(newPassword)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be 8-50 characters, with at least one uppercase letter, one lowercase letter, one number, and one special character'
+            });
+        }
+
+        // Check if new password was used recently
+        const isPasswordReused = await user.isPasswordReused(newPassword);
+        if (isPasswordReused) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot reuse a recent password. Please choose a different password.'
+            });
+        }
+
+        // Update password (this will trigger the pre-save middleware)
+        user.password = newPassword;
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset successfully"
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Error resetting password"
+        });
+    }
+};
+
+const verifyForgotPasswordOTP = async (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return res.status(400).json({
+            success: false,
+            message: "Email and OTP are required"
+        });
+    }
+
+    try {
+        const user = await User.findOne({
+            email,
+            otp,
+            otpExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "OTP verified successfully. You can now reset your password."
+        });
+    } catch (error) {
+        console.error("Verify forgot password OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error verifying OTP"
+        });
+    }
+};
+
+module.exports = { registerUser, verifyOTP, loginUser, forgotPassword, resetPassword, verifyForgotPasswordOTP };

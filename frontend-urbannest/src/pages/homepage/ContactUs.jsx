@@ -1,7 +1,11 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Footer from "../../components/Footer.jsx";
 import Navbar from "../../components/Navbar.jsx";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 const ContactUs = () => {
   const navigate = useNavigate();
@@ -16,6 +20,8 @@ const ContactUs = () => {
     message: "",
   });
   const [status, setStatus] = useState(null); // For success/error messages
+  const [loading, setLoading] = useState(false);
+  const { secureAxios, isLoading: csrfLoading, csrfEnabled } = useCSRFProtection();
 
   // Check if user is logged in
   useEffect(() => {
@@ -34,31 +40,47 @@ const ContactUs = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      const response = await fetch("https://localhost:3000/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+    if (csrfLoading) {
+      toast.error("Security initialization in progress. Please wait.");
+      return;
+    }
 
-      if (response.ok) {
-        setStatus("Message sent successfully!");
-        setFormData({
-          fullName: "",
-          phone: "",
-          email: "",
-          location: "",
-          rentalType: "",
-          area: "",
-          message: "",
-        });
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      let response;
+
+      if (secureAxios && typeof secureAxios.post === 'function') {
+        // Use secure axios if available
+        response = await secureAxios.post("/api/contact", formData);
       } else {
-        setStatus("Failed to send message. Please try again.");
+        // Fallback to regular axios
+        console.warn("secureAxios not available, using fallback for contact form");
+        response = await axios.post("https://localhost:3000/api/contact", formData, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
       }
+
+      setStatus("Message sent successfully!");
+      toast.success("Message sent successfully!");
+      setFormData({
+        fullName: "",
+        phone: "",
+        email: "",
+        location: "",
+        rentalType: "",
+        area: "",
+        message: "",
+      });
     } catch (error) {
-      setStatus("Error: Could not send message.");
+      const errorMsg = error.response?.data?.message || error.response?.data?.msg || "Failed to send message. Please try again.";
+      setStatus(`Error: ${errorMsg}`);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -205,15 +227,25 @@ const ContactUs = () => {
 
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg"
+                disabled={loading || csrfLoading}
+                className="w-full px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send →
+                {csrfLoading ? "Initializing Security..." : loading ? "Sending..." : "Send →"}
               </button>
+
+              {!csrfLoading && csrfEnabled === false && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-600 text-center">
+                    ⚠️ Running without CSRF protection
+                  </p>
+                </div>
+              )}
             </form>
           </div>
         </div>
       </section>
       <Footer />
+      <ToastContainer />
     </div>
   );
 };

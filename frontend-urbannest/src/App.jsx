@@ -7,6 +7,7 @@ import SearchBar from "./components/Searchbar.jsx";
 
 const EditProfile = lazy(() => import("./pages/account/editProfile.jsx"));
 const ForgotPassword = lazy(() => import("./pages/account/forgetPassword.jsx"));
+const ForgotPasswordOTP = lazy(() => import("./pages/account/forgotPasswordOTP.jsx"));
 const Login = lazy(() => import("./pages/account/Login"));
 const Register = lazy(() => import("./pages/account/Register"));
 const VerifyOTP = lazy(() => import("./pages/account/verifyOTP.jsx"));
@@ -61,6 +62,7 @@ function App() {
     { path: "/register", element: <Register /> },
     { path: "/verify-otp", element: <VerifyOTP /> },
     { path: "/forgot-password", element: <ForgotPassword /> },
+    { path: "/forgot-password-otp", element: <ForgotPasswordOTP /> },
     { path: "/reset-password", element: <ResetPassword /> },
     { path: "/success", element: <Success /> },
     { path: "/failure", element: <Failure /> },
