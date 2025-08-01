@@ -10,10 +10,11 @@ const {
   updateRoom,
   deleteRoom,
   validateRoom,
+  validateRoomCreation,
 } = require("../controllers/roomController");
 
 // Admin-only routes
-router.post("/", protect, authorize("admin"), upload.single("roomImage"), validateRoom, createRoom);
+router.post("/", protect, authorize("admin"), upload.single("roomImage"), validateRoomCreation, createRoom);
 router.put("/:id", protect, authorize("admin"), upload.single("roomImage"), validateRoom, updateRoom);
 router.delete("/:id", protect, authorize("admin"), deleteRoom);
 
