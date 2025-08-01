@@ -28,6 +28,13 @@ const userSchema = new mongoose.Schema({
   otpExpires: {
     type: Date,
   },
+  // 🔐 Secure password reset fields
+  passwordResetToken: {
+    type: String,
+  },
+  passwordResetExpires: {
+    type: Date,
+  },
   isVerified: {
     type: Boolean,
     default: false,
