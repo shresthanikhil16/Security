@@ -7,6 +7,28 @@ const { sanitizeRoomInput, sanitizeFileName, sanitizeInput } = require("../utils
 
 // Validation middleware for room creation and update
 const validateRoom = [
+  body("roomDescription").optional().notEmpty().withMessage("Room description cannot be empty"),
+  body("floor").optional().isNumeric().withMessage("Floor must be a number"),
+  body("address").optional().notEmpty().withMessage("Address cannot be empty"),
+  body("rentPrice").optional().isNumeric().withMessage("Rent price must be a number"),
+  body("parking").optional().isIn(["available", "not available"]).withMessage("Invalid parking value"),
+  body("contactNo").optional().notEmpty().withMessage("Contact number cannot be empty"),
+  body("bathroom").optional().isNumeric().withMessage("Bathroom count must be a number"),
+  body("location").optional().custom((value) => {
+    try {
+      const loc = JSON.parse(value);
+      if (loc.type !== "Point" || !Array.isArray(loc.coordinates) || loc.coordinates.length !== 2) {
+        throw new Error("Invalid location format");
+      }
+      return true;
+    } catch (error) {
+      throw new Error("Invalid location format");
+    }
+  }),
+];
+
+// Validation middleware for room creation (stricter)
+const validateRoomCreation = [
   body("roomDescription").notEmpty().withMessage("Room description is required"),
   body("floor").isNumeric().withMessage("Floor must be a number"),
   body("address").notEmpty().withMessage("Address is required"),
@@ -96,7 +118,19 @@ const getAllRooms = async (req, res) => {
     if (rooms.length === 0) {
       return res.status(404).json({ success: false, message: "No rooms found" });
     }
-    res.status(200).json({ success: true, rooms });
+
+    // Determine the protocol based on request
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${req.get('host')}`;
+
+    // Format rooms with proper image URLs
+    const formattedRooms = rooms.map(room => ({
+      ...room.toObject(),
+      id: room._id.toString(), // Add explicit ID field
+      roomImage: room.roomImage ? `${baseUrl}/${room.roomImage.replace(/\\/g, '/')}` : `${baseUrl}/fallback-image.png`
+    }));
+
+    res.status(200).json({ success: true, rooms: formattedRooms });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error fetching rooms", error: error.message });
   }
@@ -116,9 +150,14 @@ const getRoomById = async (req, res) => {
     // Log the room data for debugging
     console.log("Raw room data from database:", room);
 
+    // Determine the protocol based on request
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${req.get('host')}`;
+
     // Sanitize and format the room data for frontend
     const sanitizedRoom = {
       _id: room._id,
+      id: room._id.toString(), // Add explicit ID field for frontend
       roomDescription: sanitizeInput(room.roomDescription || ''),
       floor: room.floor || 0,
       address: sanitizeInput(room.address || ''),
@@ -128,7 +167,7 @@ const getRoomById = async (req, res) => {
       contact: sanitizeInput(room.contactNo || ''), // Alias for frontend compatibility
       bathroom: room.bathroom || 0,
       bathrooms: room.bathroom || 0, // Alias for frontend compatibility  
-      roomImage: room.roomImage ? sanitizeInput(room.roomImage) : null,
+      roomImage: room.roomImage ? `${baseUrl}/${room.roomImage.replace(/\\/g, '/')}` : `${baseUrl}/fallback-image.png`,
       location: room.location || { type: "Point", coordinates: [0, 0] },
       createdAt: room.createdAt
     };
@@ -191,11 +230,22 @@ const getNearbyRooms = async (req, res) => {
 // Update room by ID
 const updateRoom = async (req, res) => {
   try {
+    console.log('=== UPDATE ROOM DEBUG ===');
+    console.log('Request params:', req.params);
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file);
+    console.log('User:', req.user);
+
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); // Clean up uploaded file
-      return res.status(400).json({ success: false, errors: errors.array() });
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
 
     // Sanitize all text inputs using XSS protection utility
@@ -227,16 +277,13 @@ const updateRoom = async (req, res) => {
       parking,
       contactNo,
       bathroom: Number(bathroom),
-      location: JSON.parse(location),
-      floor: Number(floor),
-      address: sanitizedAddress,
-      rentPrice: Number(rentPrice),
-      parking,
-      contactNo,
-      bathroom: Number(bathroom),
       location: location ? JSON.parse(location) : undefined,
-      roomImage,
     };
+
+    // Only add roomImage if a new file was uploaded
+    if (roomImage) {
+      updateData.roomImage = roomImage;
+    }
 
     const updatedRoom = await Room.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!updatedRoom) {
@@ -275,5 +322,6 @@ module.exports = {
   getNearbyRooms,
   updateRoom,
   deleteRoom,
-  validateRoom, // Export validation for use in routes
+  validateRoom, // Export validation for use in routes (flexible for updates)
+  validateRoomCreation, // Export stricter validation for creation
 };
