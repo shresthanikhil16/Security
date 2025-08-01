@@ -9,7 +9,7 @@ import {
   FaUser,
 } from "react-icons/fa";
 import "tailwindcss/tailwind.css";
-import parts from "../assets/icons/logo2.png";
+import parts from "../assets/images/logo.png";
 
 const Footer = () => {
   return (
@@ -24,7 +24,7 @@ const Footer = () => {
             </div>
             <div className="flex items-center space-x-2">
               <FaEnvelope className="w-5 h-5" />
-              <p className="text-sm font-bold">urbanNest@gmail.com</p>
+              <p className="text-sm font-bold">homefy@gmail.com</p>
             </div>
             <div className="flex items-center space-x-2">
               <FaPhoneAlt className="w-5 h-5" />
@@ -39,7 +39,7 @@ const Footer = () => {
           {/* Center Section: Logo */}
           <div className="flex justify-center items-start">
             <a href="/">
-              <img src={parts} alt="UrbanNest Logo" className="w-32" />
+              <img src={parts} alt="Homefy Logo" className="w-32" />
             </a>
           </div>
 
@@ -88,7 +88,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <p className="text-center mt-6 text-xs text-gray-400 font-bold">
-          &copy; 2025 UrbanNest — Pratham Shrestha. All rights reserved.
+          &copy; 2025 Homefy — Pratham Shrestha. All rights reserved.
         </p>
       </div>
     </footer>

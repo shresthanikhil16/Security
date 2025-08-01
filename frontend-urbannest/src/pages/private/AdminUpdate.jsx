@@ -5,6 +5,7 @@ import { FaHome, FaPlus } from "react-icons/fa";
 import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
+import { useCSRFProtection } from "../../hooks/useCSRFProtection";
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,6 +20,7 @@ const AdminUpdate = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { flat: room } = state || {};
+  const { secureAxios, isLoading: csrfLoading } = useCSRFProtection();
 
   const [formData, setFormData] = useState({
     roomDescription: "",
@@ -34,7 +36,10 @@ const AdminUpdate = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("useEffect triggered - room:", room, "csrfLoading:", csrfLoading, "secureAxios:", !!secureAxios);
+
     if (room) {
+      console.log("Using room data from state:", room);
       setFormData({
         roomDescription: room.roomDescription || "",
         floor: room.floor || "",
@@ -46,7 +51,57 @@ const AdminUpdate = () => {
         location: room.location || { type: "Point", coordinates: [85.324, 27.7172] },
       });
       setLoading(false);
-    } else {
+    } else if (!csrfLoading && secureAxios && typeof secureAxios.get === 'function') {
+      // Use secureAxios when available and CSRF is ready
+      console.log("Fetching room data using secureAxios for ID:", id);
+      secureAxios.get(`/api/rooms/${id}`)
+        .then((response) => {
+          const data = response.data;
+          console.log("Received room data from secureAxios:", data);
+          setFormData({
+            roomDescription: data.roomDescription || "",
+            floor: data.floor || "",
+            address: data.address || "",
+            rentPrice: data.rentPrice || "",
+            parking: data.parking || "",
+            contactNo: data.contactNo || "",
+            bathroom: data.bathroom || "",
+            location: data.location || { type: "Point", coordinates: [85.324, 27.7172] },
+          });
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching room details with secureAxios:", error);
+          // Fallback to regular fetch
+          console.log("Falling back to regular fetch for ID:", id);
+          fetch(`https://localhost:3000/api/rooms/${id}`, {
+            headers: {
+              Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
+            },
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              console.log("Received room data from fallback fetch:", data);
+              setFormData({
+                roomDescription: data.roomDescription || "",
+                floor: data.floor || "",
+                address: data.address || "",
+                rentPrice: data.rentPrice || "",
+                parking: data.parking || "",
+                contactNo: data.contactNo || "",
+                bathroom: data.bathroom || "",
+                location: data.location || { type: "Point", coordinates: [85.324, 27.7172] },
+              });
+              setLoading(false);
+            })
+            .catch((fallbackError) => {
+              console.error("Fallback fetch also failed:", fallbackError);
+              setLoading(false);
+            });
+        });
+    } else if (!csrfLoading && (!secureAxios || typeof secureAxios.get !== 'function')) {
+      // Fallback when secureAxios is not available or not properly initialized
+      console.log("Using direct fetch (no secureAxios) for ID:", id);
       fetch(`https://localhost:3000/api/rooms/${id}`, {
         headers: {
           Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
@@ -54,6 +109,7 @@ const AdminUpdate = () => {
       })
         .then((res) => res.json())
         .then((data) => {
+          console.log("Received room data from direct fetch:", data);
           setFormData({
             roomDescription: data.roomDescription || "",
             floor: data.floor || "",
@@ -71,7 +127,12 @@ const AdminUpdate = () => {
           setLoading(false);
         });
     }
-  }, [room, id]);
+  }, [room, id, csrfLoading, secureAxios]);
+
+  // Debug: Monitor formData changes
+  useEffect(() => {
+    console.log("FormData state updated:", formData);
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -120,43 +181,86 @@ const AdminUpdate = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Debug: Log the form data being sent
+    console.log("Form data to be sent:", formData);
+    console.log("Selected image:", selectedImage);
+
+    // Validate that required fields are not empty
+    if (!formData.roomDescription || !formData.address || !formData.contactNo) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Ensure numeric fields are properly formatted
+    const numericFloor = Number(formData.floor) || 0;
+    const numericRentPrice = Number(formData.rentPrice) || 0;
+    const numericBathroom = Number(formData.bathroom) || 0;
+
     const formDataToSend = new FormData();
     formDataToSend.append("roomDescription", formData.roomDescription);
-    formDataToSend.append("floor", formData.floor);
+    formDataToSend.append("floor", numericFloor.toString());
     formDataToSend.append("address", formData.address);
-    formDataToSend.append("rentPrice", formData.rentPrice);
+    formDataToSend.append("rentPrice", numericRentPrice.toString());
     formDataToSend.append("parking", formData.parking);
     formDataToSend.append("contactNo", formData.contactNo);
-    formDataToSend.append("bathroom", formData.bathroom);
+    formDataToSend.append("bathroom", numericBathroom.toString());
     formDataToSend.append("location", JSON.stringify(formData.location));
     if (selectedImage) {
       formDataToSend.append("roomImage", selectedImage);
     }
 
-    try {
-      const response = await fetch(`https://localhost:3000/api/rooms/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
-        },
-        body: formDataToSend,
-      });
+    // Debug: Log FormData contents
+    console.log("FormData contents:");
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(key, value);
+    }
 
-      if (response.ok) {
-        alert("Room updated successfully");
-        navigate("/adminDash");
+    try {
+      if (secureAxios && typeof secureAxios.put === 'function') {
+        // Use secure axios if available
+        await secureAxios.put(`/api/rooms/${id}`, formDataToSend, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       } else {
-        alert("Failed to update room");
+        // Fallback to regular fetch
+        console.warn("secureAxios not available, using fallback for updating room");
+        const response = await fetch(`https://localhost:3000/api/rooms/${id}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}`,
+          },
+          body: formDataToSend,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Update failed:", response.status, response.statusText);
+          console.error("Error response:", errorData);
+          throw new Error(`Failed to update room: ${response.status} - ${errorData}`);
+        }
       }
+
+      alert("Room updated successfully");
+      navigate("/adminDash");
     } catch (error) {
       console.error("Error updating room:", error);
-      alert("Error updating room");
+      alert(`Error updating room: ${error.message}`);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <Navbar />
+      {(loading || csrfLoading) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <p>Loading...</p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-1 pt-16">
         {/* Sidebar */}
         <div className="bg-gray-800 text-white w-64 p-6 flex flex-col justify-between fixed h-full">

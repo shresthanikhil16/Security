@@ -18,21 +18,64 @@ export const useCSRFProtection = () => {
                 setCSRFEnabled(csrfService.isCSRFEnabled());
 
                 const axiosInstance = await csrfService.createSecureAxiosInstance();
-                if (axiosInstance && typeof axiosInstance.get === 'function') {
+                console.log('Axios instance received:', {
+                    instance: !!axiosInstance,
+                    type: typeof axiosInstance,
+                    hasGet: axiosInstance ? typeof axiosInstance.get : 'N/A',
+                    hasPost: axiosInstance ? typeof axiosInstance.post : 'N/A',
+                    hasDelete: axiosInstance ? typeof axiosInstance.delete : 'N/A',
+                    methods: axiosInstance ? Object.getOwnPropertyNames(axiosInstance) : []
+                });
+
+                if (axiosInstance && typeof axiosInstance.get === 'function' && typeof axiosInstance.post === 'function' && typeof axiosInstance.delete === 'function') {
+                    console.log('✅ Valid axios instance with all methods');
                     setSecureAxios(axiosInstance);
                 } else {
-                    console.error('Invalid axios instance returned from CSRF service');
-                    // Create a basic axios instance as fallback
+                    console.error('Invalid axios instance returned from CSRF service, creating enhanced fallback');
+                    console.log('Instance details:', {
+                        exists: !!axiosInstance,
+                        hasGet: axiosInstance ? typeof axiosInstance.get : 'N/A',
+                        hasPost: axiosInstance ? typeof axiosInstance.post : 'N/A',
+                        hasDelete: axiosInstance ? typeof axiosInstance.delete : 'N/A'
+                    });
+
+                    // Create a comprehensive axios instance as fallback
                     const fallbackInstance = axios.create({
                         baseURL: 'https://localhost:3000',
                         headers: {
                             'Content-Type': 'application/json',
                         },
+                        timeout: 15000,
+                        withCredentials: true
                     });
-                    setSecureAxios(fallbackInstance);
-                }
 
-                // Show appropriate message
+                    // Add auth interceptor to fallback
+                    fallbackInstance.interceptors.request.use((config) => {
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        if (user.token) {
+                            config.headers.Authorization = `Bearer ${user.token}`;
+                        }
+
+                        // Try to add CSRF token if available
+                        const csrfToken = localStorage.getItem('csrfToken');
+                        if (csrfToken) {
+                            config.headers['X-CSRF-Token'] = csrfToken;
+                            config.headers['x-csrf-token'] = csrfToken;
+                        }
+
+                        config.headers['X-Requested-With'] = 'XMLHttpRequest';
+                        return config;
+                    });
+
+                    // Verify the fallback instance has all methods
+                    console.log('Fallback instance verification:', {
+                        hasGet: typeof fallbackInstance.get,
+                        hasPost: typeof fallbackInstance.post,
+                        hasDelete: typeof fallbackInstance.delete
+                    });
+
+                    setSecureAxios(fallbackInstance);
+                }                // Show appropriate message
                 if (csrfService.isCSRFEnabled()) {
                     console.log('Security protection initialized with CSRF');
                 } else {
@@ -45,13 +88,40 @@ export const useCSRFProtection = () => {
                     toast.error('Failed to initialize security protection');
                 }
 
-                // Create a basic axios instance as fallback even on error
+                // Create a comprehensive axios instance as fallback even on error
                 const fallbackInstance = axios.create({
                     baseURL: 'https://localhost:3000',
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    timeout: 15000,
+                    withCredentials: true
                 });
+
+                // Add auth interceptor to error fallback
+                fallbackInstance.interceptors.request.use((config) => {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (user.token) {
+                        config.headers.Authorization = `Bearer ${user.token}`;
+                    }
+
+                    // Try to add CSRF token if available
+                    const csrfToken = localStorage.getItem('csrfToken');
+                    if (csrfToken) {
+                        config.headers['X-CSRF-Token'] = csrfToken;
+                        config.headers['x-csrf-token'] = csrfToken;
+                    }
+
+                    config.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    return config;
+                });
+
+                console.log('Error fallback instance created:', {
+                    hasGet: typeof fallbackInstance.get,
+                    hasPost: typeof fallbackInstance.post,
+                    hasDelete: typeof fallbackInstance.delete
+                });
+
                 setSecureAxios(fallbackInstance);
             } finally {
                 setIsLoading(false);

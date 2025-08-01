@@ -12,7 +12,7 @@ const AboutUs = () => {
       <section className="max-w-6xl mx-auto px-6 py-16 mt-20 text-center">
         <h1 className="text-4xl font-bold text-gray-900">About Us</h1>
         <p className="mt-4 text-lg text-gray-600">
-          Welcome to UrbanNest – Your Trusted Partner in Finding the Perfect Home
+          Welcome to Homefy – Your Trusted Partner in Finding the Perfect Home
         </p>
       </section>
 

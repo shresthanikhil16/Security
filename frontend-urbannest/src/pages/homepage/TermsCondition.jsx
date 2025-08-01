@@ -11,20 +11,20 @@ const TermsAndConditions = () => {
         <h1 className="text-3xl font-bold text-center mb-6 text-orange-600">Terms and Conditions</h1>
 
         <p className="text-lg text-gray-700 mb-6 font-bold">
-          Welcome to UrbanNest. By using our platform, you agree to comply with and be bound by the following terms and conditions. Please read them carefully.
+          Welcome to Homefy. By using our platform, you agree to comply with and be bound by the following terms and conditions. Please read them carefully.
         </p>
 
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">1. Acceptance of Terms</h2>
           <p className="text-lg text-gray-700">
-            By accessing and using UrbanNest, you agree to be bound by these Terms and Conditions and all applicable laws and regulations. If you do not agree with any part of these terms, you must discontinue using our services.
+            By accessing and using Homefy, you agree to be bound by these Terms and Conditions and all applicable laws and regulations. If you do not agree with any part of these terms, you must discontinue using our services.
           </p>
         </section>
 
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">2. User Responsibilities</h2>
           <p className="text-lg text-gray-700">
-            As a user of UrbanNest, you agree to:
+            As a user of Homefy, you agree to:
             <ul className="list-disc pl-6 mt-2">
               <li>Provide accurate and up-to-date information.</li>
               <li>Comply with all applicable laws and regulations while using the platform.</li>
@@ -36,7 +36,7 @@ const TermsAndConditions = () => {
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">3. Rental Agreement</h2>
           <p className="text-lg text-gray-700">
-            By renting any property through UrbanNest, you agree to the rental terms provided by the property owner. All rentals are subject to availability, and we are not responsible for any issues with the rented property.
+            By renting any property through Homefy, you agree to the rental terms provided by the property owner. All rentals are subject to availability, and we are not responsible for any issues with the rented property.
           </p>
         </section>
 
@@ -50,21 +50,21 @@ const TermsAndConditions = () => {
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">5. Cancellation and Refunds</h2>
           <p className="text-lg text-gray-700">
-            Cancellation and refund policies are determined by the property owner. You must review and agree to these policies before confirming any rental. UrbanNest is not responsible for cancellations or refunds.
+            Cancellation and refund policies are determined by the property owner. You must review and agree to these policies before confirming any rental. Homefy is not responsible for cancellations or refunds.
           </p>
         </section>
 
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">6. Limitation of Liability</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest is not liable for any damages or losses resulting from the use of our platform or services. We do not guarantee the accuracy or reliability of the information provided by third-party property owners.
+            Homefy is not liable for any damages or losses resulting from the use of our platform or services. We do not guarantee the accuracy or reliability of the information provided by third-party property owners.
           </p>
         </section>
 
         <section className="bg-orange-50 border-l-4 border-orange-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-orange-700">7. Changes to Terms</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest reserves the right to update these Terms and Conditions at any time. Any changes will be posted on this page, and we encourage you to review them periodically.
+            Homefy reserves the right to update these Terms and Conditions at any time. Any changes will be posted on this page, and we encourage you to review them periodically.
           </p>
         </section>
 
@@ -73,7 +73,7 @@ const TermsAndConditions = () => {
           <p className="text-lg text-gray-700">
             If you have any questions or concerns about these Terms and Conditions, please contact us at:
             <ul className="list-none pl-6 mt-2">
-              <li>Email: urbannest@gmail.com</li>
+              <li>Email: homefy@gmail.com</li>
               <li>Phone: +977-9867055337</li>
               <li>Address: St7, Pokhara 222000</li>
             </ul>

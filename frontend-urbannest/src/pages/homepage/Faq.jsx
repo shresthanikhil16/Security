@@ -13,9 +13,9 @@ const FAQ = () => {
 
   const faqs = [
     {
-      question: "What is UrbanNest?",
+      question: "What is Homefy?",
       answer:
-        "UrbanNest is an online platform that allows users to rent flats and apartments with ease. It connects property owners with potential renters, providing an easy-to-use interface for browsing available listings, managing bookings, and making payments securely.",
+        "Homefy is an online platform that allows users to rent flats and apartments with ease. It connects property owners with potential renters, providing an easy-to-use interface for browsing available listings, managing bookings, and making payments securely.",
     },
     {
       question: "How do I make a booking?",
@@ -28,44 +28,44 @@ const FAQ = () => {
         "Yes, you can cancel your booking, but cancellation policies may vary depending on the property owner. Please refer to the terms and conditions provided by the property owner for their specific cancellation policy.",
     },
     {
-      question: "Are the rental listings on UrbanNest.com verified?",
+      question: "Are the rental listings on Homefy.com verified?",
       answer:
-        "Yes, UrbanNest verifies rental listings by partnering with property owners and performing quality checks to ensure authenticity.",
+        "Yes, Homefy verifies rental listings by partnering with property owners and performing quality checks to ensure authenticity.",
     },
     {
-      question: "How can I list my property for rent on UrbanNest.com?",
+      question: "How can I list my property for rent on Homefy.com?",
       answer:
         "You can list your property by creating an account, providing property details, uploading images, setting a rental price, and submitting the listing for review.",
     },
     {
       question: "Can I search for properties based on specific criteria?",
       answer:
-        "Yes, UrbanNest.com allows users to filter properties based on location, price range, number of bedrooms, amenities, and more.",
+        "Yes, Homefy.com allows users to filter properties based on location, price range, number of bedrooms, amenities, and more.",
     },
     {
-      question: "Is it safe to rent a property through UrbanNest.com?",
+      question: "Is it safe to rent a property through Homefy.com?",
       answer:
-        "UrbanNest takes safety seriously by ensuring all listings are verified, providing secure payment options, and allowing user reviews to maintain transparency.",
+        "Homefy takes safety seriously by ensuring all listings are verified, providing secure payment options, and allowing user reviews to maintain transparency.",
     },
     {
-      question: "Can I negotiate rental terms with property owners on UrbanNest.com?",
+      question: "Can I negotiate rental terms with property owners on Homefy.com?",
       answer:
-        "Yes, you can communicate with property owners through the UrbanNest messaging system to discuss rental terms before making a booking.",
+        "Yes, you can communicate with property owners through the Homefy messaging system to discuss rental terms before making a booking.",
     },
     {
-      question: "Are there any fees associated with using UrbanNest.com?",
+      question: "Are there any fees associated with using Homefy.com?",
       answer:
-        "UrbanNest.com does not charge renters a fee for searching and booking properties, but there may be service fees for certain transactions.",
+        "Homefy.com does not charge renters a fee for searching and booking properties, but there may be service fees for certain transactions.",
     },
     {
-      question: "Can I schedule property viewings through UrbanNest.com?",
+      question: "Can I schedule property viewings through Homefy.com?",
       answer:
         "Yes, many property owners offer scheduled viewings, which can be arranged through the platform.",
     },
     {
       question: "How can I get assistance if I have questions or need support?",
       answer:
-        "You can contact UrbanNest support via email, live chat, or phone for assistance with any issues or inquiries.",
+        "You can contact Homefy support via email, live chat, or phone for assistance with any issues or inquiries.",
     },
   ];
 

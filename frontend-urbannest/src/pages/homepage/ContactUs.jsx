@@ -101,7 +101,7 @@ const ContactUs = () => {
                 className="w-10 h-10 rounded-full mr-3"
               />
               <div>
-                <p className="text-gray-800 font-semibold">Admin UrbanNest</p>
+                <p className="text-gray-800 font-semibold">Admin Homefy</p>
                 <p className="text-gray-600 text-sm">Posted on Jan 20, 2025</p>
               </div>
             </div>

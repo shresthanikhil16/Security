@@ -11,18 +11,18 @@ const PrivacyPolicy = () => {
         <h1 className="text-3xl font-bold text-center mb-6 text-indigo-600">Privacy Policy</h1>
 
         <p className="text-lg text-gray-700 mb-6 font-bold">
-          Welcome to UrbanNest. Your privacy is of paramount importance to us. This Privacy Policy outlines the types of personal information that is collected and recorded by UrbanNest and how we use it. By using this website, you consent to the terms of this Privacy Policy.
+          Welcome to Homefy. Your privacy is of paramount importance to us. This Privacy Policy outlines the types of personal information that is collected and recorded by Homefy and how we use it. By using this website, you consent to the terms of this Privacy Policy.
         </p>
 
         <section className="bg-indigo-50 border-l-4 border-indigo-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-indigo-700">1. Information We Collect</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest collects personal information when you use our services, such as when you register an account, make a booking, or communicate with us. The types of personal data we collect include:
+            Homefy collects personal information when you use our services, such as when you register an account, make a booking, or communicate with us. The types of personal data we collect include:
             <ul className="list-disc pl-6 mt-2">
               <li>Your name, email address, and phone number.</li>
               <li>Payment information for processing transactions.</li>
               <li>Details about the properties you are interested in or have rented.</li>
-              <li>Communication with UrbanNest, including support requests and inquiries.</li>
+              <li>Communication with Homefy, including support requests and inquiries.</li>
             </ul>
           </p>
         </section>
@@ -43,21 +43,21 @@ const PrivacyPolicy = () => {
         <section className="bg-indigo-50 border-l-4 border-indigo-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-indigo-700">3. Data Security</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest takes reasonable precautions to protect your personal data. However, no system is completely secure. While we strive to protect your data, we cannot guarantee absolute security of your information.
+            Homefy takes reasonable precautions to protect your personal data. However, no system is completely secure. While we strive to protect your data, we cannot guarantee absolute security of your information.
           </p>
         </section>
 
         <section className="bg-indigo-50 border-l-4 border-indigo-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-indigo-700">4. Data Sharing</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest does not sell or rent your personal data to third parties. We may share your information with trusted service providers who help us operate our platform or process transactions, but only for the purposes stated in this Privacy Policy.
+            Homefy does not sell or rent your personal data to third parties. We may share your information with trusted service providers who help us operate our platform or process transactions, but only for the purposes stated in this Privacy Policy.
           </p>
         </section>
 
         <section className="bg-indigo-50 border-l-4 border-indigo-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-indigo-700">5. Cookies</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest uses cookies to enhance your experience on our website. Cookies are small files that are stored on your device and help us remember your preferences and improve functionality.
+            Homefy uses cookies to enhance your experience on our website. Cookies are small files that are stored on your device and help us remember your preferences and improve functionality.
           </p>
         </section>
 
@@ -71,7 +71,7 @@ const PrivacyPolicy = () => {
         <section className="bg-indigo-50 border-l-4 border-indigo-500 shadow-md rounded-lg p-6 mb-8 hover:shadow-lg transition-shadow duration-300">
           <h2 className="text-2xl font-semibold mb-4 text-indigo-700">7. Changes to This Policy</h2>
           <p className="text-lg text-gray-700">
-            UrbanNest may update this Privacy Policy from time to time. Any changes will be posted on this page, and we encourage you to review it periodically for updates.
+            Homefy may update this Privacy Policy from time to time. Any changes will be posted on this page, and we encourage you to review it periodically for updates.
           </p>
         </section>
 
@@ -80,7 +80,7 @@ const PrivacyPolicy = () => {
           <p className="text-lg text-gray-700">
             If you have any questions or concerns about our Privacy Policy, please contact us at:
             <ul className="list-none pl-6 mt-2">
-              <li>Email: urbannest@gmail.com</li>
+              <li>Email: homefy@gmail.com</li>
               <li>Phone: +977-9867055337</li>
               <li>Address: St7, Pokhara 222000</li>
             </ul>

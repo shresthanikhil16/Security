@@ -1,6 +1,6 @@
 # CSRF Protection Implementation
 
-This implementation provides Cross-Site Request Forgery (CSRF) protection for the UrbanNest frontend application.
+This implementation provides Cross-Site Request Forgery (CSRF) protection for the Homefy frontend application.
 
 ## Files Added/Modified:
 
