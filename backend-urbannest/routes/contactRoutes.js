@@ -1,8 +1,10 @@
 const express = require('express');
 const { sendContactForm } = require('../controllers/contactController');
+const { contactRateLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-router.post('/', sendContactForm);
+// Apply rate limiter to contact form submissions
+router.post('/', contactRateLimiter, sendContactForm);
 
 module.exports = router;
