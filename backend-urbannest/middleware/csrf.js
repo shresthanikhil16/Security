@@ -15,17 +15,19 @@ const csrfProtection = (req, res, next) => {
         req.path === '/api/auth/verify-otp' ||
         req.path === '/api/auth/forgotpassword' ||
         req.path === '/api/auth/forgot-password' ||
+        req.path === '/api/auth/forgotPassword' || // Frontend compatibility
         req.path === '/api/auth/verify-forgot-password-otp' ||
         req.path === '/api/auth/reset-password' ||
         req.path === '/api/auth/reset-password-with-otp' ||
         req.path === '/api/rooms/nearby' ||
         req.path === '/api/rooms' && (req.method === 'POST' || req.method === 'PUT') ||
-        req.path.startsWith('/api/rooms/') && req.method === 'DELETE' ||
+        req.path.startsWith('/api/rooms/') || // Allow all rooms routes including GET by ID
         req.path === '/api/contact' ||
         req.path === '/api/email/send' ||
         req.path.startsWith('/uploads/') || // Skip CSRF for static uploads
         req.path.startsWith('/api/esewa/') ||
         req.path.startsWith('/api/audit/') ||
+        req.path.startsWith('/api/user/delete/') || // Skip CSRF for user delete (JWT protected)
         req.path === '/test') {
         return next();
     }
