@@ -5,6 +5,8 @@ const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const connectDb = require("./config/db");
 const { securityMiddleware, xssProtection } = require("./middleware/security");
+const { noSqlInjectionProtection } = require("./middleware/noSqlInjection");
+const { apiRateLimiter } = require("./middleware/rateLimiter");
 const AuthRouter = require("./routes/authRoutes");
 const protectedRouter = require("./routes/protectedRoutes");
 const roomRoutes = require("./routes/roomRoutes");
@@ -31,18 +33,45 @@ connectDb().catch((err) => {
 app.use(securityMiddleware);
 app.use(xssProtection);
 
+// 🛡️ NoSQL Injection Protection - Apply before parsing request bodies
+app.use(express.json());
+app.use(noSqlInjectionProtection);
+
 // Middleware
 app.use(
   cors({
-    origin: ["https://localhost:5173", "http://localhost:5173"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token", "CSRF-Token", "Cache-Control"],
+    origin: [
+      "https://localhost:5173",
+      "http://localhost:5173",
+      "https://localhost:5174",
+      "http://localhost:5174"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-CSRF-Token",
+      "CSRF-Token",
+      "Cache-Control",
+      "x-request-time",
+      "X-Request-Time",
+      "Accept",
+      "Origin",
+      "User-Agent",
+      "DNT",
+      "Keep-Alive",
+      "X-Requested-With",
+      "If-Modified-Since",
+      "Range"
+    ],
     credentials: true, // Important for cookies
-    exposedHeaders: ["Content-Type", "Content-Length"]
+    exposedHeaders: ["Content-Type", "Content-Length", "X-CSRF-Token", "Cache-Control"]
   })
 );
 app.use(cookieParser());
-app.use(express.json());
+
+// Apply API rate limiting to all routes
+app.use("/api", apiRateLimiter);
 
 // Serve static files with proper headers for images
 app.use("/uploads", (req, res, next) => {
@@ -73,7 +102,7 @@ app.get("/api/csrf-token", generateCSRFToken);
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "UrbanNest API Server is running",
+    message: "Shoephy API Server is running",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -87,6 +116,28 @@ app.get("/", (req, res) => {
 // Test endpoint
 app.get("/test", (req, res) => {
   res.json({ message: "Server is running" });
+});
+
+// Fallback image endpoint for missing images
+app.get("/fallback-image.png", (req, res) => {
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+
+  // Return a simple SVG placeholder
+  const fallbackSvg = `
+    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#f3f4f6"/>
+      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="24" fill="#6b7280" text-anchor="middle" dy=".3em">
+        🏠 Image Not Available
+      </text>
+      <text x="50%" y="65%" font-family="Arial, sans-serif" font-size="14" fill="#9ca3af" text-anchor="middle" dy=".3em">
+        Homefy Property
+      </text>
+    </svg>
+  `;
+
+  res.send(fallbackSvg);
 });
 
 // Route handling
