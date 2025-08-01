@@ -2,6 +2,8 @@ const asyncHandler = require("../middleware/async");
 const bcrypt = require('bcrypt');
 const User = require("../models/User");
 const jwt = require('jsonwebtoken');
+const { sanitizeUserInput } = require("../utils/xssProtection");
+const { sanitizeInput: noSqlSanitize } = require("../middleware/noSqlInjection");
 
 const getUserById = async (req, res) => {
     try {
@@ -121,6 +123,85 @@ const changePassword = asyncHandler(async (req, res) => {
     }
 });
 
+// 🔐 SECURE DELETE USER FUNCTION
+const deleteUser = asyncHandler(async (req, res) => {
+    const userId = req.params.id;
+
+    console.log("🗑️ Delete user request:");
+    console.log("  - Target User ID:", userId);
+    console.log("  - Requesting User ID:", req.user?._id);
+    console.log("  - Requesting User Role:", req.user?.role);
+    console.log("  - Request IP:", req.ip);
+
+    try {
+        // Apply comprehensive input sanitization to user ID
+        const xssSanitizedId = sanitizeUserInput(userId);
+        const fullyCleanId = noSqlSanitize(xssSanitizedId);
+        console.log("✅ User ID sanitized:", fullyCleanId);
+
+        // Find the user to be deleted
+        const userToDelete = await User.findById(fullyCleanId);
+        if (!userToDelete) {
+            console.log("❌ User not found for deletion");
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        console.log(`👤 User to delete: ${userToDelete.email} (Role: ${userToDelete.role})`);
+
+        // Authorization checks
+        const requestingUserId = req.user._id.toString();
+        const targetUserId = fullyCleanId;
+        const requestingUserRole = req.user.role;
+
+        // Rule 1: Users can delete their own account
+        if (requestingUserId === targetUserId) {
+            console.log("✅ Self-deletion authorized");
+        }
+        // Rule 2: Admins can delete any account except other admins
+        else if (requestingUserRole === 'admin') {
+            if (userToDelete.role === 'admin') {
+                console.log("❌ Admin cannot delete another admin");
+                return res.status(403).json({
+                    success: false,
+                    message: 'Administrators cannot delete other administrator accounts'
+                });
+            }
+            console.log("✅ Admin deletion authorized");
+        }
+        // Rule 3: All other cases are forbidden
+        else {
+            console.log("❌ Deletion not authorized");
+            return res.status(403).json({
+                success: false,
+                message: 'Access forbidden. You can only delete your own account or must be an administrator.'
+            });
+        }
+
+        // Perform the deletion
+        await User.findByIdAndDelete(fullyCleanId);
+
+        console.log(`✅ User deleted successfully: ${userToDelete.email}`);
+        console.log(`  - Deleted by: ${req.user.email}`);
+        console.log(`  - Deletion type: ${requestingUserId === targetUserId ? 'Self-deletion' : 'Admin deletion'}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'User account deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('💥 Delete user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting user account',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        });
+    }
+});
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -143,5 +224,6 @@ module.exports = {
     getAllUsers,
     updateUser,
     changePassword,
+    deleteUser,
     authenticateToken,
 };
